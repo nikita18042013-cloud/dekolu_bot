@@ -5,8 +5,8 @@ import asyncio
 import os
 from datetime import datetime, timedelta
 
-API_TOKEN = os.environ["API_TOKEN"]
-CHAT_ID = int(os.environ["CHAT_ID"])
+API_TOKEN = os.environ["8452703687:AAE9Wtfs1vAWQQtkRk7nYvCgXAv0i13wuqE"]
+CHAT_ID = int(os.environ["657522185"])
 URL = "https://energy-ua.info/cherga/1-2"
 
 bot = Bot(token=API_TOKEN)

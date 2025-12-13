@@ -14,13 +14,13 @@ from apscheduler.triggers.interval import IntervalTrigger
 # =========================================================================
 
 # Отримуємо токен з Environment Variables, які ви встановите на Scalingo
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_TOKEN") 
+TELEGRAM_BOT_TOKEN = os.environ.get("8452703687:AAGTh_J84smwq5cTGNTZySTlv1z7947LitQ") 
 URL = "https://energy-ua.info/cherga/1-2"
 
 # ID чату або користувача, куди надсилатимуться автоматичні сповіщення
 # ВАЖЛИВО: Замініть на реальний ID! 
 # Його можна дізнатися, надіславши повідомлення боту @userinfobot
-TARGET_CHAT_ID = os.environ.get("TARGET_CHAT_ID") 
+TARGET_CHAT_ID = os.environ.get("657522185") 
 
 # Налаштування логування
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -212,5 +212,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
-    -m "Final setup with scheduler and environment variables"

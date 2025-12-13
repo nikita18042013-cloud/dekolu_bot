@@ -212,3 +212,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
+    -m "Final setup with scheduler and environment variables"

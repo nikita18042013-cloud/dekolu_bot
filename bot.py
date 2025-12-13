@@ -20,7 +20,7 @@ URL = "https://energy-ua.info/cherga/1-2"
 # ID чату або користувача, куди надсилатимуться автоматичні сповіщення
 # ВАЖЛИВО: Замініть на реальний ID! 
 # Його можна дізнатися, надіславши повідомлення боту @userinfobot
-TARGET_CHAT_ID = os.environ.get("657522185") 
+TARGET_CHAT_ID = os.environ.get("TARGET_CHAT_ID") 
 
 # Налаштування логування
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)

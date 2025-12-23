@@ -13,7 +13,7 @@ URL = "https://energy-ua.info/cherga/1-2"
 TZ = pytz.timezone("Europe/Kyiv")
 CHATS_FILE = "chats.json"
 
-# --- Загрузка подписчиков из файла ---
+# --- Загрузка подписчиков ---
 if os.path.exists(CHATS_FILE):
     with open(CHATS_FILE, "r") as f:
         CHAT_IDS = set(json.load(f))
@@ -71,12 +71,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-# --- Создаём приложение PTB ---
+# --- Создаём приложение ---
 app = ApplicationBuilder().token(TOKEN).build()
 app.add_handler(CommandHandler("start", start))
 
-# --- Запускаем планировщик в фоне ---
-asyncio.create_task(scheduler(app))
 
-# --- Запуск бота (без asyncio.run) ---
-app.run_polling()
+# --- Фоновая задача через post_init ---
+async def on_startup(app):
+    app.create_task(scheduler(app))
+
+
+# --- Запуск бота ---
+app.run_polling(post_init=on_startup)

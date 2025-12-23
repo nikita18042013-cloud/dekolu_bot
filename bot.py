@@ -1,97 +1,67 @@
-import os
-import json
 import asyncio
+import logging
 import requests
 from bs4 import BeautifulSoup
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-TOKEN = os.getenv("BOT_TOKEN")
+# ---------- Настройки ----------
+TOKEN = "BOT_TOKEN"
 URL = "https://energy-ua.info/cherga/1-2"
-CHATS_FILE = "chats.json"
-SCHEDULE_FILE = "schedule.json"
 
-# --- Подписчики ---
-if os.path.exists(CHATS_FILE):
-    with open(CHATS_FILE, "r") as f:
-        CHAT_IDS = set(json.load(f))
-else:
-    CHAT_IDS = set()
+# Логирование
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
 
-def save_chats():
-    with open(CHATS_FILE, "w") as f:
-        json.dump(list(CHAT_IDS), f)
-
-# --- Последний график ---
-def load_last_schedule():
-    if os.path.exists(SCHEDULE_FILE):
-        with open(SCHEDULE_FILE, "r") as f:
-            return json.load(f)
-    return {}
-
-def save_last_schedule(schedule):
-    with open(SCHEDULE_FILE, "w") as f:
-        json.dump(schedule, f)
-
-# --- Парсинг ---
-def get_schedule():
-    try:
-        headers = {"User-Agent": "Mozilla/5.0"}
-        r = requests.get(URL, headers=headers, timeout=15)
-        r.raise_for_status()
-        soup = BeautifulSoup(r.text, "html.parser")
-        table = soup.find("table")
-        schedule = {}
-        if not table:
-            return schedule
-        for row in table.find_all("tr")[1:]:
-            cols = row.find_all("td")
-            if len(cols) >= 2:
-                time = cols[0].get_text(strip=True)
-                area = cols[1].get_text(strip=True)
-                schedule[time] = area
-        return schedule
-    except Exception as e:
-        print("Ошибка при получении графика:", e)
-        return {}
-
-# --- Команда /start ---
+# ---------- Команды ----------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    if chat_id not in CHAT_IDS:
-        CHAT_IDS.add(chat_id)
-        save_chats()
-    await update.message.reply_text("✅ Бот активирован!")
+    await update.message.reply_text("Привет! Я бот для уведомлений об отключении света.")
 
-# --- Фоновая задача ---
+# ---------- Функция проверки графика ----------
+def get_schedule():
+    headers = {"User-Agent": "Mozilla/5.0"}
+    try:
+        r = requests.get(URL, headers=headers, timeout=15)
+        r.raise_for_status()  # проверка HTTP ошибок
+        soup = BeautifulSoup(r.text, "html.parser")
+        # Пример: берем текст со страницы
+        schedule_text = soup.get_text()[:200]  # первые 200 символов
+        return schedule_text
+    except requests.exceptions.HTTPError as e:
+        logging.error(f"Ошибка при получении графика: {e}")
+        return None
+    except Exception as e:
+        logging.error(f"Ошибка при получении графика: {e}")
+        return None
+
+# ---------- Фоновая задача ----------
 async def scheduler(app):
     while True:
-        new_schedule = get_schedule()
-        if new_schedule:
-            last_schedule = load_last_schedule()
-            if new_schedule != last_schedule:
-                text = "⚡ График відключень:\n"
-                for t, a in new_schedule.items():
-                    text += f"{t} — {a}\n"
-                for chat_id in CHAT_IDS:
-                    try:
-                        await app.bot.send_message(chat_id=chat_id, text=text)
-                    except Exception as e:
-                        print(f"Ошибка отправки в {chat_id}: {e}")
-                save_last_schedule(new_schedule)
-            else:
-                print("График не изменился")
-        await asyncio.sleep(600)  # проверка каждые 10 минут
+        schedule = get_schedule()
+        if schedule:
+            logging.info(f"Проверка графика: {schedule[:100]}...")  # логируем первые 100 символов
+            # Здесь можно отправлять уведомления всем пользователям
+            # await app.bot.send_message(chat_id=USER_ID, text=f"График: {schedule}")
+        else:
+            logging.warning("График недоступен")
+        await asyncio.sleep(600)  # ждем 10 минут
 
-# --- Основная функция ---
-async def main():
+# ---------- Главная функция ----------
+def main():
+    # Создаем приложение
     app = ApplicationBuilder().token(TOKEN).build()
+
+    # Добавляем команды
     app.add_handler(CommandHandler("start", start))
 
-    # Запуск фоновой задачи после старта бота
-    asyncio.create_task(scheduler(app))
+    # Запускаем фоновые задачи
+    app.create_task(scheduler(app))
 
-    await app.run_polling()
+    # Запускаем бот (сам управляет event loop)
+    app.run_polling()
 
+# ---------- Запуск ----------
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

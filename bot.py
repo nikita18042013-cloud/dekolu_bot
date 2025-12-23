@@ -20,7 +20,12 @@ CHAT_IDS = set()
 def get_schedule() -> str:
     """Получение текущего графика (заглушка для парсинга)"""
     try:
-        response = requests.get(URL, timeout=15)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                          "AppleWebKit/537.36 (KHTML, like Gecko) "
+                          "Chrome/120.0.0.0 Safari/537.36"
+        }
+        response = requests.get(URL, headers=headers, timeout=15)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
         # Здесь можно добавить реальный парсинг таблицы
@@ -66,21 +71,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-# ===== Главная функция =====
-async def main():
-    # Создание приложения
+# ===== Главная часть =====
+def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
     # Добавляем хендлер команды /start
     app.add_handler(CommandHandler("start", start))
 
-    # Запуск планировщика уведомлений
+    # Запуск планировщика уведомлений в фоновом режиме
     asyncio.create_task(scheduler(app))
 
-    # Запуск бота
-    await app.run_polling()
+    # Запуск бота (без asyncio.run!)
+    app.run_polling()
 
 
 # ===== Точка входа =====
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

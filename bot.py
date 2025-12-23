@@ -65,14 +65,8 @@ def main():
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
 
-    # Добавляем планировщик через post_init
-    async def on_startup(app: Application):
-        asyncio.create_task(scheduler(app))
-
-    app.post_init(on_startup)
-
-    # Запуск бота
-    app.run_polling()
+    # Запуск бота с фоновым планировщиком через post_init
+    app.run_polling(post_init=lambda app: asyncio.create_task(scheduler(app)))
 
 
 if __name__ == "__main__":

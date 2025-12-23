@@ -1,9 +1,10 @@
 import os
 import json
+import asyncio
 import requests
 from bs4 import BeautifulSoup
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, CallbackContext, JobQueue
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 TOKEN = os.getenv("BOT_TOKEN")
 URL = "https://energy-ua.info/cherga/1-2"
@@ -35,9 +36,7 @@ def save_last_schedule(schedule):
 # --- Парсинг ---
 def get_schedule():
     try:
-        headers = {
-            "User-Agent": "Mozilla/5.0",
-        }
+        headers = {"User-Agent": "Mozilla/5.0"}
         r = requests.get(URL, headers=headers, timeout=15)
         r.raise_for_status()
         soup = BeautifulSoup(r.text, "html.parser")
@@ -56,45 +55,43 @@ def get_schedule():
         print("Ошибка при получении графика:", e)
         return {}
 
-# --- Отправка уведомлений ---
-def notify(context: CallbackContext):
-    new_schedule = get_schedule()
-    if not new_schedule:
-        return
-    last_schedule = load_last_schedule()
-    if new_schedule != last_schedule:
-        text = "⚡ График відключень:\n"
-        for t, a in new_schedule.items():
-            text += f"{t} — {a}\n"
-        for chat_id in CHAT_IDS:
-            try:
-                context.bot.send_message(chat_id=chat_id, text=text)
-            except Exception as e:
-                print(f"Ошибка отправки в {chat_id}: {e}")
-        save_last_schedule(new_schedule)
-    else:
-        print("График не изменился")
-
 # --- Команда /start ---
-def start(update: Update, context: CallbackContext):
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     if chat_id not in CHAT_IDS:
         CHAT_IDS.add(chat_id)
         save_chats()
-    update.message.reply_text("✅ Бот активирован!")
+    await update.message.reply_text("✅ Бот активирован!")
+
+# --- Фоновая задача ---
+async def scheduler(app):
+    while True:
+        new_schedule = get_schedule()
+        if new_schedule:
+            last_schedule = load_last_schedule()
+            if new_schedule != last_schedule:
+                text = "⚡ График відключень:\n"
+                for t, a in new_schedule.items():
+                    text += f"{t} — {a}\n"
+                for chat_id in CHAT_IDS:
+                    try:
+                        await app.bot.send_message(chat_id=chat_id, text=text)
+                    except Exception as e:
+                        print(f"Ошибка отправки в {chat_id}: {e}")
+                save_last_schedule(new_schedule)
+            else:
+                print("График не изменился")
+        await asyncio.sleep(600)  # проверка каждые 10 минут
 
 # --- Основная функция ---
-def main():
-    updater = Updater(TOKEN)
-    dp = updater.dispatcher
-    dp.add_handler(CommandHandler("start", start))
+async def main():
+    app = ApplicationBuilder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
 
-    # --- Фоновая задача каждые 10 минут ---
-    updater.job_queue.run_repeating(notify, interval=600, first=0)
+    # Запуск фоновой задачи после старта бота
+    asyncio.create_task(scheduler(app))
 
-    # --- Запуск ---
-    updater.start_polling()
-    updater.idle()
+    await app.run_polling()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

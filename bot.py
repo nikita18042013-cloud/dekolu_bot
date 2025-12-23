@@ -8,7 +8,6 @@ from telegram import Bot
 from telegram.ext import ApplicationBuilder, CommandHandler
 
 TOKEN = os.getenv("BOT_TOKEN")  # токен зададим в Railway
-CHAT_IDS = set()
 
 URL = "https://energy-ua.info/cherga/1-2"
 TZ = pytz.timezone("Europe/Kyiv")

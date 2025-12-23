@@ -58,7 +58,7 @@ async def scheduler(app):
         if now.minute == 10:
             await notify(app, "✅ Через 10 минут возможное включение света")
 
-        await asyncio.sleep(20 * 60)  # каждые 20 минут
+        await asyncio.sleep(20 * 60)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -75,11 +75,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 app = ApplicationBuilder().token(TOKEN).build()
 app.add_handler(CommandHandler("start", start))
 
-
-# --- Фоновая задача через post_init ---
-async def on_startup(app):
+# --- Фоновая задача через create_task сразу после запуска цикла ---
+async def main():
+    # Запускаем scheduler
     app.create_task(scheduler(app))
+    # Запуск бота
+    await app.run_polling()
 
 
-# --- Запуск бота ---
-app.run_polling(post_init=on_startup)
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())

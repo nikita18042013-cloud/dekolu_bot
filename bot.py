@@ -1,5 +1,5 @@
-import asyncio
 import os
+import asyncio
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -7,7 +7,8 @@ import pytz
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-TOKEN = os.getenv("BOT_TOKEN")  # токен задаём в Railway
+# ===== Настройки =====
+TOKEN = os.getenv("BOT_TOKEN")  # токен Telegram
 URL = "https://energy-ua.info/cherga/1-2"
 TZ = pytz.timezone("Europe/Kyiv")
 
@@ -15,8 +16,9 @@ TZ = pytz.timezone("Europe/Kyiv")
 CHAT_IDS = set()
 
 
+# ===== Функции =====
 def get_schedule() -> str:
-    """Простейший парсер страницы с графиком"""
+    """Получение текущего графика (заглушка для парсинга)"""
     try:
         response = requests.get(URL, timeout=15)
         response.raise_for_status()
@@ -43,8 +45,9 @@ async def scheduler(app):
         print("⏱ Проверка графика:", now.strftime("%H:%M"))
 
         schedule_text = get_schedule()
+        print(schedule_text)
 
-        # Пример уведомлений
+        # Пример уведомлений: за 10 минут до возможного отключения
         if now.minute == 50:
             await notify(app, "⚠️ Через 10 минут возможное отключение света")
         if now.minute == 10:
@@ -53,26 +56,31 @@ async def scheduler(app):
         await asyncio.sleep(20 * 60)  # проверка каждые 20 минут
 
 
+# ===== Хендлеры =====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     CHAT_IDS.add(chat_id)
     await update.message.reply_text(
-        "✅ Бот активирован\n"
+        "✅ Бот активирован!\n"
         "Я буду уведомлять об отключениях света."
     )
 
 
+# ===== Главная функция =====
 async def main():
+    # Создание приложения
     app = ApplicationBuilder().token(TOKEN).build()
+
+    # Добавляем хендлер команды /start
     app.add_handler(CommandHandler("start", start))
 
-    # Запускаем планировщик
+    # Запуск планировщика уведомлений
     asyncio.create_task(scheduler(app))
 
     # Запуск бота
     await app.run_polling()
 
 
+# ===== Точка входа =====
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(main())

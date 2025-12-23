@@ -1,4 +1,2 @@
-python-telegram-bot==20.3
-requests
-beautifulsoup4
-pytz
+python-telegram-bot==20.5
+aiohttp

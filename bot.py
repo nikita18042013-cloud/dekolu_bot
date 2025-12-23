@@ -5,12 +5,11 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 import pytz
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, Application
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 TOKEN = os.getenv("BOT_TOKEN")
 URL = "https://energy-ua.info/cherga/1-2"
 TZ = pytz.timezone("Europe/Kyiv")
-
 CHAT_IDS = set()
 
 
@@ -28,7 +27,7 @@ def get_schedule() -> str:
         return f"❌ Ошибка при получении графика: {e}"
 
 
-async def notify(app: Application, text: str):
+async def notify(app, text: str):
     for chat_id in CHAT_IDS:
         try:
             await app.bot.send_message(chat_id=chat_id, text=text)
@@ -36,13 +35,11 @@ async def notify(app: Application, text: str):
             print(f"Ошибка отправки уведомления в {chat_id}: {e}")
 
 
-async def scheduler(app: Application):
+async def scheduler(app):
     while True:
         now = datetime.now(TZ)
         print("⏱ Проверка графика:", now.strftime("%H:%M"))
-
-        schedule_text = get_schedule()
-        print(schedule_text)
+        print(get_schedule())
 
         if now.minute == 50:
             await notify(app, "⚠️ Через 10 минут возможное отключение света")
@@ -56,18 +53,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     CHAT_IDS.add(chat_id)
     await update.message.reply_text(
-        "✅ Бот активирован!\n"
-        "Я буду уведомлять об отключениях света."
+        "✅ Бот активирован!\nЯ буду уведомлять об отключениях света."
     )
 
 
-def main():
+async def main():
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
 
-    # Запуск бота с фоновым планировщиком через post_init
-    app.run_polling(post_init=lambda app: asyncio.create_task(scheduler(app)))
+    # Запускаем планировщик в фоне через create_task
+    asyncio.create_task(scheduler(app))
+
+    # Запуск бота
+    await app.run_polling()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
